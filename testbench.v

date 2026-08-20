@@ -1,0 +1,69 @@
+`timescale 1ns / 1ps
+
+module tb_titan_c1_system;
+    reg clk;
+    reg rst;
+    reg [31:0] instr_in;
+    reg [31:0] mem_data_in;
+    wire [31:0] pc;
+    wire [31:0] mem_addr_out;
+    wire [31:0] mem_data_out;
+    wire mem_write_en;
+    wire [31:0] titan_out;
+
+    // Titan C1 çekirdeğini bağlıyoruz
+    titan_c1_core uut (
+        .clk(clk),
+        .rst(rst),
+        .instr_in(instr_in),
+        .mem_data_in(mem_data_in),
+        .pc(pc),
+        .mem_addr_out(mem_addr_out),
+        .mem_data_out(mem_data_out),
+        .mem_write_en(mem_write_en),
+        .titan_out(titan_out)
+    );
+
+    always #5 clk = ~clk;
+
+    initial begin
+        $dumpfile("dump.vcd");
+        $dumpvars(0, tb_titan_c1_system);
+
+        clk = 0;
+        rst = 1; instr_in = 32'b0; mem_data_in = 32'b0; #10;
+        rst = 0; #10;
+
+        $display("=====================================================");
+        $display("TITAN C1 ENDUSTRIYEL BELLEK KOPRUSU TESTI BASLADI");
+        $display("=====================================================");
+
+        // ADIM 1: İç hafızadaki x1 yazmacına 100 sayısını koy (RAM adresi olarak kullanacağız)
+        instr_in = 32'h06400093; #10;
+
+        // ADIM 2: Harici RAM bellekten veri okuma simülasyonu yapıyoruz. 
+        // Telefonun RAM'inden Titan C1'e "50" sayısı geliyor ve x2 yazmacına yükleniyor (LW x2, 0(x1))
+        mem_data_in = 32'd50; 
+        instr_in = 32'h0000A103; #10;
+        $display("[Zaman: %0dt] >> RAM'den Okunan Veri x2'ye Alindi: %d", $time, titan_out);
+
+        // ADIM 3: İç hafızadaki x3 yazmacına yapay zeka çarpanı olan "3" sayısını yüklüyoruz.
+        instr_in = 32'h00300193; #10;
+
+        // ADIM 4: TITAN C1 Yapay Zeka Motorunu çalıştır! RAM'den aldığımız x2(50) ile x3(3) çarpılıyor. Sonucu x4'e yazılıyor.
+        instr_in = 32'h0031027F; #10;
+        $display("[Zaman: %0dt] >> TITAN C1 AI Donanim Sonucu: %d", $time, titan_out);
+
+        // ADIM 5: Milyon dolarlık an! Titan C1 ürettiği 150 sonucunu RAM belleğe geri kaydediyor (SW x4, 4(x1))
+        instr_in = 32'h0040A223; #10;
+        if (mem_write_en) begin
+            $display("[Zaman: %0dt] >> BAŞARI! Titan C1 Sonucu RAM'e Yazdi! RAM Adresi: %d | Yazilan Veri: %d", $time, mem_addr_out, mem_data_out);
+        end
+
+        #20;
+        $display("=====================================================");
+        $display("TITAN C1 TAM ENTEGRASYON TESTI RESMEN BITTI!");
+        $display("=====================================================");
+        $finish;
+    end
+endmodule
